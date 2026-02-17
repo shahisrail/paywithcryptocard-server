@@ -1,0 +1,11 @@
+node_modules
+.env
+.env.local
+.env.production
+npm-debug.log
+.DS_Store
+.git
+.gitignore
+.md
+src
+tsconfig.json

@@ -87,26 +87,33 @@ app.use((req, res) => {
 // Error handling middleware
 app.use(errorHandler);
 
-// Start server
-const startServer = async (): Promise<void> => {
-  try {
-    // Connect to database
-    await connectDatabase();
+// Start server only if not running in Vercel
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  const startServer = async (): Promise<void> => {
+    try {
+      // Connect to database
+      await connectDatabase();
 
-    // Start listening
-    app.listen(config.port, () => {
-      console.log(`🚀 Server running on port ${config.port}`);
-      console.log(`📝 Environment: ${config.nodeEnv}`);
-      console.log(`🌐 Frontend URL: ${config.frontendUrl}`);
-      console.log(`📚 API Documentation: http://localhost:${config.port}/api-docs`);
-      console.log(`💚 Health Check: http://localhost:${config.port}/health`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-};
+      // Start listening
+      app.listen(config.port, () => {
+        console.log(`🚀 Server running on port ${config.port}`);
+        console.log(`📝 Environment: ${config.nodeEnv}`);
+        console.log(`🌐 Frontend URL: ${config.frontendUrl}`);
+        console.log(`📚 API Documentation: http://localhost:${config.port}/api-docs`);
+        console.log(`💚 Health Check: http://localhost:${config.port}/health`);
+      });
+    } catch (error) {
+      console.error('Failed to start server:', error);
+      process.exit(1);
+    }
+  };
 
-startServer();
+  startServer();
+} else {
+  // In Vercel, connect to database immediately when the module loads
+  connectDatabase().catch(err => {
+    console.error('Failed to connect to database:', err);
+  });
+}
 
 export default app;

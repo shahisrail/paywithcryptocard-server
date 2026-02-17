@@ -2,7 +2,6 @@ import { Document } from 'mongoose';
 import { Request } from 'express';
 
 export interface IUser extends Document {
-  _id: string;
   email: string;
   password: string;
   fullName: string;
@@ -19,7 +18,6 @@ export interface AuthRequest extends Request {
 }
 
 export interface IDeposit extends Document {
-  _id: string;
   userId: string;
   currency: 'BTC' | 'ETH' | 'USDT_ERC20' | 'USDT_TRC20' | 'XMR';
   amount: number;
@@ -32,7 +30,6 @@ export interface IDeposit extends Document {
 }
 
 export interface ICard extends Document {
-  _id: string;
   userId: string;
   cardNumber: string;
   expiryDate: string;
@@ -46,7 +43,6 @@ export interface ICard extends Document {
 }
 
 export interface ITransaction extends Document {
-  _id: string;
   userId: string;
   cardId?: string;
   type: 'deposit' | 'card_create' | 'card_load' | 'purchase' | 'withdrawal';
@@ -59,7 +55,6 @@ export interface ITransaction extends Document {
 }
 
 export interface IAdminSettings extends Document {
-  _id: string;
   cryptoAddresses: {
     btc: string;
     eth: string;
