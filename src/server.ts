@@ -8,6 +8,7 @@ import { connectDatabase } from './config/database';
 import { config } from './config';
 import { swaggerSpec } from './config/swagger';
 import { errorHandler } from './utils/errors';
+import { seedAdmin, seedSettings } from './utils/seedAdmin';
 
 // Import routes
 import authRoutes from './modules/auth/auth.routes';
@@ -94,6 +95,11 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
       // Connect to database
       await connectDatabase();
 
+      // Seed admin user and settings if they don't exist
+      console.log('🌱 Seeding database...');
+      await seedAdmin();
+      await seedSettings();
+
       // Start listening
       app.listen(config.port, () => {
         console.log(`🚀 Server running on port ${config.port}`);
@@ -101,6 +107,8 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
         console.log(`🌐 Frontend URL: ${config.frontendUrl}`);
         console.log(`📚 API Documentation: http://localhost:${config.port}/api-docs`);
         console.log(`💚 Health Check: http://localhost:${config.port}/health`);
+        console.log(`👤 Admin Email: ${config.admin.email}`);
+        console.log(`🔑 Admin Password: ${config.admin.password}`);
       });
     } catch (error) {
       console.error('Failed to start server:', error);
@@ -110,10 +118,20 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
 
   startServer();
 } else {
-  // In Vercel, connect to database immediately when the module loads
-  connectDatabase().catch(err => {
-    console.error('Failed to connect to database:', err);
-  });
+  // In Vercel, connect to database and seed when the module loads
+  const initializeVercel = async (): Promise<void> => {
+    try {
+      await connectDatabase();
+      console.log('🌱 Seeding database for Vercel...');
+      await seedAdmin();
+      await seedSettings();
+      console.log('✅ Database seeded successfully');
+    } catch (err) {
+      console.error('Failed to initialize database:', err);
+    }
+  };
+
+  initializeVercel();
 }
 
 export default app;
