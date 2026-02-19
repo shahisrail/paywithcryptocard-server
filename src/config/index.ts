@@ -3,7 +3,9 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   jwtSecret: process.env.JWT_SECRET || 'fallback_secret_key_change_this',
   jwtExpire: process.env.JWT_EXPIRE || '7d',
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  frontendUrl: process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+    : ['http://localhost:3000'],
 
   crypto: {
     btc: process.env.BTC_ADDRESS || '',
