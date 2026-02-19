@@ -6,6 +6,7 @@ import { Transaction } from '../../models/Transaction';
 import { AuthRequest } from '../../types';
 import { AppError } from '../../utils/errors';
 import { config } from '../../config';
+import { convertToUSD } from '../../utils/coingecko';
 
 export const getDepositAddresses = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -38,7 +39,7 @@ export const getDepositAddresses = async (req: AuthRequest, res: Response): Prom
 
 export const createDeposit = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { currency, amount, txHash } = req.body;
+    const { currency, amount, txHash, usdAmount: frontendUsdAmount } = req.body;
     const userId = req.user?.userId!;
 
     // Get the appropriate wallet address
@@ -65,6 +66,21 @@ export const createDeposit = async (req: AuthRequest, res: Response): Promise<vo
       throw new AppError('Deposit address not configured for this currency', 400);
     }
 
+    // Use USD amount from frontend if provided, otherwise convert
+    let usdAmount = 0;
+    if (frontendUsdAmount && frontendUsdAmount > 0) {
+      // Use the USD amount calculated by frontend
+      usdAmount = frontendUsdAmount;
+    } else {
+      // Fallback: Auto-convert using CoinGecko API
+      try {
+        usdAmount = await convertToUSD(currency, amount);
+      } catch (error) {
+        console.error('Error converting to USD:', error);
+        // Continue with zero USD amount if conversion fails
+      }
+    }
+
     // Create deposit record
     const deposit = await Deposit.create({
       userId,
@@ -73,6 +89,7 @@ export const createDeposit = async (req: AuthRequest, res: Response): Promise<vo
       txHash,
       walletAddress,
       status: 'pending',
+      usdAmount, // Store the USD amount
     });
 
     res.status(201).json({

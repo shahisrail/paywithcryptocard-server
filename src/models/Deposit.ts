@@ -18,6 +18,10 @@ const depositSchema = new Schema(
       required: true,
       min: 0,
     },
+    usdAmount: {
+      type: Number,
+      default: 0,
+    },
     txHash: {
       type: String,
       sparse: true,

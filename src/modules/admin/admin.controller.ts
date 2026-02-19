@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import bcrypt from 'bcryptjs';
 import { Deposit } from '../../models/Deposit';
 import { User } from '../../models/User';
 import { Card } from '../../models/Card';
@@ -211,6 +212,43 @@ export const updateUserBalance = async (req: AuthRequest, res: Response): Promis
   }
 };
 
+export const getAllDeposits = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { limit = 50, skip = 0, currency, status } = req.query;
+
+    const query: any = {};
+
+    // Filter by status if provided (pending, approved, rejected, or all)
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    if (currency) {
+      query.currency = currency;
+    }
+
+    const deposits = await Deposit.find(query)
+      .sort({ createdAt: -1 })
+      .limit(Number(limit))
+      .skip(Number(skip))
+      .populate('userId', 'email fullName');
+
+    const total = await Deposit.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        deposits,
+        total,
+        limit: Number(limit),
+        skip: Number(skip),
+      },
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const getPendingDeposits = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { limit = 50, skip = 0, currency } = req.query;
@@ -280,12 +318,13 @@ export const approveDeposit = async (req: AuthRequest, res: Response): Promise<v
         amount: usdAmount,
         balance: user.balance,
         status: 'completed',
-        description: `Crypto deposit: ${deposit.currency} ${deposit.amount}`,
+        description: `Crypto deposit: ${deposit.currency}`,
         metadata: {
           depositId: deposit._id,
           cryptoAmount: deposit.amount,
           cryptoCurrency: deposit.currency,
           txHash: deposit.txHash,
+          usdAmount: usdAmount,
         },
       });
     }
@@ -510,6 +549,177 @@ export const updateSettings = async (req: AuthRequest, res: Response): Promise<v
       success: true,
       message: 'Settings updated successfully',
       data: settings,
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ==================== Admin Management Functions ====================
+
+export const getAllAdmins = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { limit = 50, skip = 0, search = '' } = req.query;
+
+    const query: any = { role: 'admin' };
+
+    if (search) {
+      query.$or = [
+        { email: { $regex: search, $options: 'i' } },
+        { fullName: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const admins = await User.find(query)
+      .sort({ createdAt: -1 })
+      .limit(Number(limit))
+      .skip(Number(skip))
+      .select('-password');
+
+    const total = await User.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        admins,
+        total,
+        limit: Number(limit),
+        skip: Number(skip),
+      },
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const createAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { email, password, fullName } = req.body;
+
+    // Validate input
+    if (!email || !password || !fullName) {
+      throw new AppError('Email, password, and full name are required', 400);
+    }
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      throw new AppError('Email already exists', 400);
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create admin
+    const admin = await User.create({
+      email,
+      password: hashedPassword,
+      fullName,
+      role: 'admin',
+      balance: 0,
+      isActive: true,
+      isEmailVerified: true,
+    });
+
+    // Return admin without password using destructuring
+    const { password: _, ...adminResponse } = admin.toObject();
+
+    res.status(201).json({
+      success: true,
+      message: 'Admin created successfully',
+      data: adminResponse,
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateAdminStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+    const currentAdminId = req.user?.userId;
+
+    // Prevent admin from deactivating themselves
+    if (id === currentAdminId) {
+      throw new AppError('You cannot deactivate yourself', 400);
+    }
+
+    const admin = await User.findOne({ _id: id, role: 'admin' });
+
+    if (!admin) {
+      throw new AppError('Admin not found', 404);
+    }
+
+    admin.isActive = isActive;
+    await admin.save();
+
+    // Return admin without password using destructuring
+    const { password: _, ...adminResponse } = admin.toObject();
+
+    res.status(200).json({
+      success: true,
+      message: `Admin ${isActive ? 'activated' : 'deactivated'} successfully`,
+      data: adminResponse,
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const deleteAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const currentAdminId = req.user?.userId;
+
+    // Prevent admin from deleting themselves
+    if (id === currentAdminId) {
+      throw new AppError('You cannot delete yourself', 400);
+    }
+
+    const admin = await User.findOne({ _id: id, role: 'admin' });
+
+    if (!admin) {
+      throw new AppError('Admin not found', 404);
+    }
+
+    await User.deleteOne({ _id: id });
+
+    res.status(200).json({
+      success: true,
+      message: 'Admin deleted successfully',
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateAdminPassword = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      throw new AppError('New password must be at least 6 characters long', 400);
+    }
+
+    const admin = await User.findOne({ _id: id, role: 'admin' });
+
+    if (!admin) {
+      throw new AppError('Admin not found', 404);
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    admin.password = hashedPassword;
+    await admin.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Admin password updated successfully',
     });
   } catch (error) {
     throw error;

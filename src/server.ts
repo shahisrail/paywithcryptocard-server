@@ -9,6 +9,7 @@ import { config } from './config';
 import { swaggerSpec } from './config/swagger';
 import { errorHandler } from './utils/errors';
 import { seedAdmin, seedSettings } from './utils/seedAdmin';
+import { verifyToken } from './utils/jwt';
 
 // Import routes
 import authRoutes from './modules/auth/auth.routes';
@@ -38,13 +39,33 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Rate limiting
+// Rate limiting - skip for admin users
 const limiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.maxRequests,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    try {
+      // Extract token from cookies or authorization header
+      const token = req.cookies?.token || req.headers?.authorization?.replace('Bearer ', '');
+
+      if (!token) {
+        // No token, apply rate limit
+        return false;
+      }
+
+      // Verify token and check if user is admin
+      const decoded = verifyToken(token);
+
+      // Skip rate limiting for admin users
+      return decoded.role === 'admin';
+    } catch (error) {
+      // Invalid token, apply rate limit
+      return false;
+    }
+  },
 });
 
 app.use('/api', limiter);

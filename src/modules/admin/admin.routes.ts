@@ -190,6 +190,40 @@ router.post('/users/:id/balance', adminController.updateUserBalance);
 
 /**
  * @swagger
+ * /api/admin/deposits:
+ *   get:
+ *     summary: Get all deposits with optional filters
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, approved, rejected, all]
+ *           default: all
+ *       - in: query
+ *         name: currency
+ *         schema:
+ *           type: string
+ *           enum: [BTC, ETH, USDT_ERC20, USDT_TRC20, XMR]
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: skip
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Deposits retrieved successfully
+ */
+router.get('/deposits', adminController.getAllDeposits);
+
+/**
+ * @swagger
  * /api/admin/deposits/pending:
  *   get:
  *     summary: Get pending deposits
@@ -443,5 +477,143 @@ router.get('/settings', adminController.getSettings);
  *         description: Settings updated successfully
  */
 router.put('/settings', adminController.updateSettings);
+
+/**
+ * @swagger
+ * /api/admin/admins:
+ *   get:
+ *     summary: Get all admins
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by email or full name
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: skip
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Admins retrieved successfully
+ */
+router.get('/admins', adminController.getAllAdmins);
+
+/**
+ * @swagger
+ * /api/admin/admins:
+ *   post:
+ *     summary: Create a new admin
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - fullName
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *               fullName:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Admin created successfully
+ *       400:
+ *         description: Validation error or email already exists
+ */
+router.post('/admins', adminController.createAdmin);
+
+/**
+ * @swagger
+ * /api/admin/admins/{id}/status:
+ *   patch:
+ *     summary: Update admin active status
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - isActive
+ *             properties:
+ *               isActive:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Admin status updated successfully
+ */
+router.patch('/admins/:id/status', adminController.updateAdminStatus);
+
+/**
+ * @swagger
+ * /api/admin/admins/{id}:
+ *   delete:
+ *     summary: Delete an admin
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Admin deleted successfully
+ */
+router.delete('/admins/:id', adminController.deleteAdmin);
+
+/**
+ * @swagger
+ * /api/admin/admins/{id}/password:
+ *   patch:
+ *     summary: Update admin password
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newPassword
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *     responses:
+ *       200:
+ *         description: Admin password updated successfully
+ */
+router.patch('/admins/:id/password', adminController.updateAdminPassword);
 
 export default router;
