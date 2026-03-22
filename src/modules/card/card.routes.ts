@@ -13,6 +13,7 @@ router.use(authenticate);
  * /api/cards:
  *   post:
  *     summary: Create a new virtual card
+ *     description: Creates a new virtual card with auto-generated details. Card holder name is automatically fetched from user profile.
  *     tags: [Cards]
  *     requestBody:
  *       required: false
@@ -24,6 +25,7 @@ router.use(authenticate);
  *               spendingLimit:
  *                 type: number
  *                 default: 10000
+ *                 description: Spending limit for the card
  *                 example: 10000
  *     responses:
  *       201:
@@ -35,13 +37,16 @@ router.use(authenticate);
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
+ *                   example: Card created successfully
  *                 data:
  *                   type: object
  *                   properties:
  *                     _id:
  *                       type: string
+ *                       example: 507f1f77bcf86cd799439011
  *                     cardNumber:
  *                       type: string
  *                       example: 4532 1234 5678 9010
@@ -54,14 +59,20 @@ router.use(authenticate);
  *                       description: Only shown once upon creation
  *                     cardHolder:
  *                       type: string
+ *                       example: John Doe
+ *                       description: Auto-generated from user profile
  *                     balance:
  *                       type: number
+ *                       example: 0
  *                     status:
  *                       type: string
+ *                       enum: [active, frozen, terminated]
+ *                       example: active
  *                     spendingLimit:
  *                       type: number
+ *                       example: 10000
  *       400:
- *         description: Insufficient balance or validation error
+ *         description: Insufficient balance (balance must be > 0 and cover card fee) or validation error
  *       401:
  *         description: Not authenticated
  */

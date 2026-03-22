@@ -18,13 +18,18 @@ export const createCard = async (req: AuthRequest, res: Response): Promise<void>
       throw new AppError('User not found', 404);
     }
 
+    // STRICT FLOW: Block card creation if balance is 0 or negative
+    if (user.balance <= 0) {
+      throw new AppError('Please add funds to your account before creating a card. You need a minimum balance to proceed.', 400);
+    }
+
     // Get card issuance fee
     let settings = await AdminSettings.findOne({});
     const cardFee = settings?.cardIssuanceFee || 5;
 
-    // Check if user has enough balance
+    // Check if user has enough balance for card fee
     if (user.balance < cardFee) {
-      throw new AppError(`Insufficient balance. Card issuance fee is $${cardFee}`, 400);
+      throw new AppError(`Your balance is insufficient to create a card. A one-time issuance fee of $${cardFee} is required. Please add more funds to continue.`, 400);
     }
 
     // Check if user already has an active card
@@ -34,7 +39,7 @@ export const createCard = async (req: AuthRequest, res: Response): Promise<void>
     });
 
     if (existingActiveCard) {
-      throw new AppError('You already have an active card. Please contact support to issue a new card.', 400);
+      throw new AppError('You already have an active card. Please freeze or terminate your existing card before creating a new one, or contact support for assistance.', 400);
     }
 
     // Generate card details
@@ -127,7 +132,7 @@ export const loadCard = async (req: AuthRequest, res: Response): Promise<void> =
     const userId = req.user?.userId!;
 
     if (amount <= 0) {
-      throw new AppError('Amount must be greater than 0', 400);
+      throw new AppError('Please enter an amount greater than $0.', 400);
     }
 
     // Get user
@@ -138,13 +143,13 @@ export const loadCard = async (req: AuthRequest, res: Response): Promise<void> =
 
     // Check if user has enough balance
     if (user.balance < amount) {
-      throw new AppError('Insufficient balance', 400);
+      throw new AppError(`Insufficient balance. You have $${user.balance.toFixed(2)} but trying to load $${amount.toFixed(2)}. Please add more funds.`, 400);
     }
 
     // Get card
     const card = await Card.findOne({ _id: id, userId, status: 'active' });
     if (!card) {
-      throw new AppError('Card not found or inactive', 404);
+      throw new AppError('Card not found or inactive. Only active cards can be loaded with funds.', 404);
     }
 
     // Load card
