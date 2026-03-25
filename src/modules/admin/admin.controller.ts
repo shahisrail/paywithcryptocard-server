@@ -518,8 +518,10 @@ export const updateSettings = async (req: AuthRequest, res: Response): Promise<v
   try {
     const {
       cryptoAddresses,
+      qrCodeImages,
       minimumDeposit,
       cardIssuanceFee,
+      isActive,
     } = req.body;
 
     let settings = await AdminSettings.findOne({});
@@ -535,12 +537,23 @@ export const updateSettings = async (req: AuthRequest, res: Response): Promise<v
       };
     }
 
+    if (qrCodeImages) {
+      settings.qrCodeImages = {
+        ...(settings.qrCodeImages || {}),
+        ...qrCodeImages,
+      };
+    }
+
     if (typeof minimumDeposit === 'number') {
       settings.minimumDeposit = minimumDeposit;
     }
 
     if (typeof cardIssuanceFee === 'number') {
       settings.cardIssuanceFee = cardIssuanceFee;
+    }
+
+    if (typeof isActive === 'boolean') {
+      settings.isActive = isActive;
     }
 
     await settings.save();

@@ -21,6 +21,7 @@ export const getDepositAddresses = async (req: AuthRequest, res: Response): Prom
     }
 
     const addresses = settings.cryptoAddresses || config.crypto;
+    const qrCodeImages = (settings as any).qrCodeImages || {};
 
     res.status(200).json({
       success: true,
@@ -30,6 +31,14 @@ export const getDepositAddresses = async (req: AuthRequest, res: Response): Prom
         USDT_ERC20: addresses.usdtErc20 || config.crypto.usdtErc20,
         USDT_TRC20: addresses.usdtTrc20 || config.crypto.usdtTrc20,
         XMR: addresses.xmr || config.crypto.xmr,
+        minimumDeposit: settings.minimumDeposit || 10,
+        qrCodeImages: {
+          BTC: qrCodeImages.btc || "",
+          ETH: qrCodeImages.eth || "",
+          USDT_ERC20: qrCodeImages.usdtErc20 || "",
+          USDT_TRC20: qrCodeImages.usdtTrc20 || "",
+          XMR: qrCodeImages.xmr || "",
+        },
       },
     });
   } catch (error) {
