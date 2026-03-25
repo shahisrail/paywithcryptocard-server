@@ -12,6 +12,7 @@ export const config = {
     eth: process.env.ETH_ADDRESS || '',
     usdtErc20: process.env.USDT_ERC20_ADDRESS || '',
     usdtTrc20: process.env.USDT_TRC20_ADDRESS || '',
+    usdcErc20: process.env.USDC_ERC20_ADDRESS || '',
     xmr: process.env.XMR_ADDRESS || '',
   },
 

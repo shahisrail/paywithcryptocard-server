@@ -497,6 +497,7 @@ export const getSettings = async (req: AuthRequest, res: Response): Promise<void
           eth: '',
           usdtErc20: '',
           usdtTrc20: '',
+          usdcErc20: '',
           xmr: '',
         },
         minimumDeposit: 10,
@@ -518,7 +519,6 @@ export const updateSettings = async (req: AuthRequest, res: Response): Promise<v
   try {
     const {
       cryptoAddresses,
-      qrCodeImages,
       minimumDeposit,
       cardIssuanceFee,
       isActive,
@@ -534,13 +534,6 @@ export const updateSettings = async (req: AuthRequest, res: Response): Promise<v
       settings.cryptoAddresses = {
         ...settings.cryptoAddresses,
         ...cryptoAddresses,
-      };
-    }
-
-    if (qrCodeImages) {
-      settings.qrCodeImages = {
-        ...(settings.qrCodeImages || {}),
-        ...qrCodeImages,
       };
     }
 
