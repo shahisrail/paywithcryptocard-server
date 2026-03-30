@@ -1,14 +1,20 @@
-# Backend Dockerfile - Node.js/Express (Use Pre-built Dist)
+# Backend Dockerfile - Node.js/Express (Build in Docker)
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Install production dependencies only
+# Install ALL dependencies (including dev dependencies for building)
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm install
 
-# Copy source code and pre-built dist files
+# Copy source code
 COPY . .
+
+# Build TypeScript
+RUN npm run build
+
+# Remove dev dependencies to reduce image size
+RUN npm prune --omit=dev
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -16,12 +22,8 @@ RUN addgroup -g 1001 -S nodejs && \
 
 # Change ownership
 RUN chown -R nodejs:nodejs /app
-
-# Change to dist directory for proper module resolution
-WORKDIR /app/dist
-
 USER nodejs
 
 EXPOSE 5000
 
-CMD ["node", "server.js"]
+CMD ["node", "dist/server.js"]
