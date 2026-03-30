@@ -1,7 +1,7 @@
 services:
-  # MongoDB Database
+  # MongoDB Database (using 4.4 for better CPU compatibility)
   mongodb:
-    image: mongo:8.0
+    image: mongo:4.4
     container_name: paywithcrypto-mongodb
     restart: always
     environment:
