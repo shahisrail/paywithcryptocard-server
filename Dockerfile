@@ -1,20 +1,14 @@
-# Backend Dockerfile - Node.js/Express
+# Backend Dockerfile - Node.js/Express (Use Pre-built Dist)
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Install ALL dependencies (including dev dependencies for building)
+# Install production dependencies only
 COPY package*.json ./
-RUN npm install
+RUN npm install --omit=dev
 
-# Copy source code
+# Copy source code and pre-built dist files
 COPY . .
-
-# Build TypeScript (needs dev dependencies)
-RUN npm run build
-
-# Remove dev dependencies to reduce image size
-RUN npm prune --omit=dev
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
