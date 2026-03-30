@@ -3,15 +3,18 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies
+# Install ALL dependencies (including dev dependencies for building)
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm install
 
 # Copy source code
 COPY . .
 
-# Build TypeScript
+# Build TypeScript (needs dev dependencies)
 RUN npm run build
+
+# Remove dev dependencies to reduce image size
+RUN npm prune --omit=dev
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
