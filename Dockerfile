@@ -16,8 +16,12 @@ RUN addgroup -g 1001 -S nodejs && \
 
 # Change ownership
 RUN chown -R nodejs:nodejs /app
+
+# Change to dist directory for proper module resolution
+WORKDIR /app/dist
+
 USER nodejs
 
 EXPOSE 5000
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "server.js"]
