@@ -45,8 +45,3 @@ coverage/
 # Logs
 logs/
 *.log
-
-# TypeScript
-*.ts
-!dist/*.js
-tsconfig.json
