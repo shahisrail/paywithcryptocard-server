@@ -7,14 +7,12 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
-const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
 const database_1 = require("./config/database");
 const config_1 = require("./config");
 const swagger_1 = require("./config/swagger");
 const errors_1 = require("./utils/errors");
 const seedAdmin_1 = require("./utils/seedAdmin");
-const jwt_1 = require("./utils/jwt");
 // Import routes
 const auth_routes_1 = __importDefault(require("./modules/auth/auth.routes"));
 const deposit_routes_1 = __importDefault(require("./modules/deposit/deposit.routes"));
@@ -22,8 +20,6 @@ const card_routes_1 = __importDefault(require("./modules/card/card.routes"));
 const transaction_routes_1 = __importDefault(require("./modules/transaction/transaction.routes"));
 const admin_routes_1 = __importDefault(require("./modules/admin/admin.routes"));
 const app = (0, express_1.default)();
-// Trust proxy for rate limiting
-app.set('trust proxy', 1);
 // Security middleware
 app.use((0, helmet_1.default)({
     crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -37,33 +33,6 @@ app.use((0, cors_1.default)({
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 app.use((0, cookie_parser_1.default)());
-// Rate limiting - skip for admin users
-const limiter = (0, express_rate_limit_1.default)({
-    windowMs: config_1.config.rateLimit.windowMs,
-    max: config_1.config.rateLimit.maxRequests,
-    message: 'Too many requests from this IP, please try again later.',
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip: (req) => {
-        try {
-            // Extract token from cookies or authorization header
-            const token = req.cookies?.token || req.headers?.authorization?.replace('Bearer ', '');
-            if (!token) {
-                // No token, apply rate limit
-                return false;
-            }
-            // Verify token and check if user is admin
-            const decoded = (0, jwt_1.verifyToken)(token);
-            // Skip rate limiting for admin users
-            return decoded.role === 'admin';
-        }
-        catch (error) {
-            // Invalid token, apply rate limit
-            return false;
-        }
-    },
-});
-app.use('/api', limiter);
 // Health check route
 app.get('/health', (req, res) => {
     res.status(200).json({
