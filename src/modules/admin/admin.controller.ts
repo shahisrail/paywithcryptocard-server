@@ -7,6 +7,7 @@ import { Transaction } from '../../models/Transaction';
 import { AdminSettings } from '../../models/AdminSettings';
 import { AuthRequest } from '../../types';
 import { AppError } from '../../utils/errors';
+import { generateCardNumber, generateCVV, generateExpiryDate } from '../../utils/generateCardNumber';
 
 export const getDashboardStats = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -311,9 +312,31 @@ export const approveDeposit = async (req: AuthRequest, res: Response): Promise<v
       user.balance += usdAmount;
       await user.save();
 
+      // Check if user has a card
+      let card = await Card.findOne({ userId: user._id });
+
+      if (!card) {
+        // Create new card for user
+        card = await Card.create({
+          userId: user._id,
+          cardNumber: generateCardNumber(),
+          expiryDate: generateExpiryDate(),
+          cvv: generateCVV(),
+          cardHolder: user.fullName,
+          balance: usdAmount,
+          spendingLimit: 1000,
+          status: 'active',
+        });
+      } else {
+        // Update existing card balance
+        card.balance += usdAmount;
+        await card.save();
+      }
+
       // Create transaction record
       await Transaction.create({
         userId: user._id,
+        cardId: card._id,
         type: 'deposit',
         amount: usdAmount,
         balance: user.balance,
@@ -325,6 +348,8 @@ export const approveDeposit = async (req: AuthRequest, res: Response): Promise<v
           cryptoCurrency: deposit.currency,
           txHash: deposit.txHash,
           usdAmount: usdAmount,
+          cardId: card._id,
+          cardNumber: card.cardNumber,
         },
       });
     }
@@ -726,6 +751,37 @@ export const updateAdminPassword = async (req: AuthRequest, res: Response): Prom
     res.status(200).json({
       success: true,
       message: 'Admin password updated successfully',
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const deleteUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findOne({ _id: id, role: 'user' });
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    // Delete user's cards
+    await Card.deleteMany({ userId: id });
+
+    // Delete user's transactions
+    await Transaction.deleteMany({ userId: id });
+
+    // Delete user's deposits
+    await Deposit.deleteMany({ userId: id });
+
+    // Delete the user
+    await User.deleteOne({ _id: id });
+
+    res.status(200).json({
+      success: true,
+      message: 'User deleted successfully',
     });
   } catch (error) {
     throw error;

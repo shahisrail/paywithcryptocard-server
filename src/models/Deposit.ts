@@ -10,7 +10,7 @@ const depositSchema = new Schema(
     },
     currency: {
       type: String,
-      enum: ['BTC', 'ETH', 'USDT_ERC20', 'USDT_TRC20', 'XMR'],
+      enum: ['BTC', 'ETH', 'USDT_ERC20', 'USDT_TRC20', 'USDC_ERC20', 'XMR'],
       required: true,
     },
     amount: {
