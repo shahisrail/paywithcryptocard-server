@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateAdminPassword = exports.deleteAdmin = exports.updateAdminStatus = exports.createAdmin = exports.getAllAdmins = exports.updateSettings = exports.getSettings = exports.getAllTransactions = exports.updateCardStatus = exports.getAllCards = exports.rejectDeposit = exports.approveDeposit = exports.getPendingDeposits = exports.getAllDeposits = exports.updateUserBalance = exports.updateUserStatus = exports.getUserById = exports.getAllUsers = exports.getDashboardStats = void 0;
+exports.deleteUser = exports.updateAdminPassword = exports.deleteAdmin = exports.updateAdminStatus = exports.createAdmin = exports.getAllAdmins = exports.updateSettings = exports.getSettings = exports.getAllTransactions = exports.updateCardStatus = exports.getAllCards = exports.rejectDeposit = exports.approveDeposit = exports.getPendingDeposits = exports.getAllDeposits = exports.updateUserBalance = exports.updateUserStatus = exports.getUserById = exports.getAllUsers = exports.getDashboardStats = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const Deposit_1 = require("../../models/Deposit");
 const User_1 = require("../../models/User");
@@ -11,6 +11,7 @@ const Card_1 = require("../../models/Card");
 const Transaction_1 = require("../../models/Transaction");
 const AdminSettings_1 = require("../../models/AdminSettings");
 const errors_1 = require("../../utils/errors");
+const generateCardNumber_1 = require("../../utils/generateCardNumber");
 const getDashboardStats = async (req, res) => {
     try {
         // Get platform statistics
@@ -271,9 +272,30 @@ const approveDeposit = async (req, res) => {
             const oldBalance = user.balance;
             user.balance += usdAmount;
             await user.save();
+            // Check if user has a card
+            let card = await Card_1.Card.findOne({ userId: user._id });
+            if (!card) {
+                // Create new card for user
+                card = await Card_1.Card.create({
+                    userId: user._id,
+                    cardNumber: (0, generateCardNumber_1.generateCardNumber)(),
+                    expiryDate: (0, generateCardNumber_1.generateExpiryDate)(),
+                    cvv: (0, generateCardNumber_1.generateCVV)(),
+                    cardHolder: user.fullName,
+                    balance: usdAmount,
+                    spendingLimit: 1000,
+                    status: 'active',
+                });
+            }
+            else {
+                // Update existing card balance
+                card.balance += usdAmount;
+                await card.save();
+            }
             // Create transaction record
             await Transaction_1.Transaction.create({
                 userId: user._id,
+                cardId: card._id,
                 type: 'deposit',
                 amount: usdAmount,
                 balance: user.balance,
@@ -285,6 +307,8 @@ const approveDeposit = async (req, res) => {
                     cryptoCurrency: deposit.currency,
                     txHash: deposit.txHash,
                     usdAmount: usdAmount,
+                    cardId: card._id,
+                    cardNumber: card.cardNumber,
                 },
             });
         }
@@ -634,3 +658,28 @@ const updateAdminPassword = async (req, res) => {
     }
 };
 exports.updateAdminPassword = updateAdminPassword;
+const deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await User_1.User.findOne({ _id: id, role: 'user' });
+        if (!user) {
+            throw new errors_1.AppError('User not found', 404);
+        }
+        // Delete user's cards
+        await Card_1.Card.deleteMany({ userId: id });
+        // Delete user's transactions
+        await Transaction_1.Transaction.deleteMany({ userId: id });
+        // Delete user's deposits
+        await Deposit_1.Deposit.deleteMany({ userId: id });
+        // Delete the user
+        await User_1.User.deleteOne({ _id: id });
+        res.status(200).json({
+            success: true,
+            message: 'User deleted successfully',
+        });
+    }
+    catch (error) {
+        throw error;
+    }
+};
+exports.deleteUser = deleteUser;

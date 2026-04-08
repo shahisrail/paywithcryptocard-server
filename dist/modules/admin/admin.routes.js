@@ -217,6 +217,26 @@ router.patch('/users/:id/status', adminController.updateUserStatus);
 router.post('/users/:id/balance', adminController.updateUserBalance);
 /**
  * @swagger
+ * /api/admin/users/{id}:
+ *   delete:
+ *     summary: Delete a user
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *       404:
+ *         description: User not found
+ */
+router.delete('/users/:id', adminController.deleteUser);
+/**
+ * @swagger
  * /api/admin/deposits:
  *   get:
  *     summary: Get all deposits with optional filters

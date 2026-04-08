@@ -8,7 +8,7 @@ exports.config = {
     jwtExpire: process.env.JWT_EXPIRE || '7d',
     frontendUrl: process.env.FRONTEND_URL
         ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
-        : ['http://localhost:3000', 'https://frontend-iota-eight-42.vercel.app'],
+        : ['http://localhost:3000', 'https://paywithcryptocard.net'],
     crypto: {
         btc: process.env.BTC_ADDRESS || '',
         eth: process.env.ETH_ADDRESS || '',
