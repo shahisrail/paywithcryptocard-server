@@ -394,6 +394,80 @@ export const rejectDeposit = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
+export const deleteDeposit = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const deposit = await Deposit.findById(id);
+
+    if (!deposit) {
+      throw new AppError('Deposit not found', 404);
+    }
+
+    // Find and delete all transactions related to this deposit
+    const transactions = await Transaction.find({
+      'metadata.depositId': deposit._id
+    });
+
+    // If deposit was approved, reverse the balance and card changes
+    if (deposit.status === 'approved') {
+      const user = await User.findById(deposit.userId);
+      if (user) {
+        // Find the transaction to get the USD amount and card info
+        for (const transaction of transactions) {
+          if (transaction.metadata?.usdAmount) {
+            // Reverse user balance
+            user.balance -= transaction.metadata.usdAmount;
+
+            // Reverse card balance if card exists
+            if (transaction.metadata?.cardId) {
+              const card = await Card.findById(transaction.metadata.cardId);
+              if (card) {
+                card.balance -= transaction.metadata.usdAmount;
+
+                // If card balance becomes zero or negative, terminate the card
+                if (card.balance <= 0) {
+                  card.status = 'terminated';
+                  card.balance = 0;
+                }
+
+                await card.save();
+              }
+            }
+          }
+        }
+
+        // Ensure balance doesn't go negative
+        if (user.balance < 0) {
+          user.balance = 0;
+        }
+
+        await user.save();
+      }
+    }
+
+    // Delete all related transactions
+    await Transaction.deleteMany({
+      'metadata.depositId': deposit._id
+    });
+
+    // Delete the deposit
+    await Deposit.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Deposit deleted successfully. All related transactions and card data have been removed.',
+      data: {
+        depositId: id,
+        transactionsDeleted: transactions.length,
+        userBalanceReversed: deposit.status === 'approved'
+      }
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const getAllCards = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { status = 'all', limit = 50, skip = 0 } = req.query;

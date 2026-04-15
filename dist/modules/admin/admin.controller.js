@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.updateAdminPassword = exports.deleteAdmin = exports.updateAdminStatus = exports.createAdmin = exports.getAllAdmins = exports.updateSettings = exports.getSettings = exports.getAllTransactions = exports.updateCardStatus = exports.getAllCards = exports.rejectDeposit = exports.approveDeposit = exports.getPendingDeposits = exports.getAllDeposits = exports.updateUserBalance = exports.updateUserStatus = exports.getUserById = exports.getAllUsers = exports.getDashboardStats = void 0;
+exports.deleteUser = exports.updateAdminPassword = exports.deleteAdmin = exports.updateAdminStatus = exports.createAdmin = exports.getAllAdmins = exports.updateSettings = exports.getSettings = exports.getAllTransactions = exports.updateCardStatus = exports.getAllCards = exports.deleteDeposit = exports.rejectDeposit = exports.approveDeposit = exports.getPendingDeposits = exports.getAllDeposits = exports.updateUserBalance = exports.updateUserStatus = exports.getUserById = exports.getAllUsers = exports.getDashboardStats = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const Deposit_1 = require("../../models/Deposit");
 const User_1 = require("../../models/User");
@@ -349,6 +349,69 @@ const rejectDeposit = async (req, res) => {
     }
 };
 exports.rejectDeposit = rejectDeposit;
+const deleteDeposit = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deposit = await Deposit_1.Deposit.findById(id);
+        if (!deposit) {
+            throw new errors_1.AppError('Deposit not found', 404);
+        }
+        // Find and delete all transactions related to this deposit
+        const transactions = await Transaction_1.Transaction.find({
+            'metadata.depositId': deposit._id
+        });
+        // If deposit was approved, reverse the balance and card changes
+        if (deposit.status === 'approved') {
+            const user = await User_1.User.findById(deposit.userId);
+            if (user) {
+                // Find the transaction to get the USD amount and card info
+                for (const transaction of transactions) {
+                    if (transaction.metadata?.usdAmount) {
+                        // Reverse user balance
+                        user.balance -= transaction.metadata.usdAmount;
+                        // Reverse card balance if card exists
+                        if (transaction.metadata?.cardId) {
+                            const card = await Card_1.Card.findById(transaction.metadata.cardId);
+                            if (card) {
+                                card.balance -= transaction.metadata.usdAmount;
+                                // If card balance becomes zero or negative, terminate the card
+                                if (card.balance <= 0) {
+                                    card.status = 'terminated';
+                                    card.balance = 0;
+                                }
+                                await card.save();
+                            }
+                        }
+                    }
+                }
+                // Ensure balance doesn't go negative
+                if (user.balance < 0) {
+                    user.balance = 0;
+                }
+                await user.save();
+            }
+        }
+        // Delete all related transactions
+        await Transaction_1.Transaction.deleteMany({
+            'metadata.depositId': deposit._id
+        });
+        // Delete the deposit
+        await Deposit_1.Deposit.findByIdAndDelete(id);
+        res.status(200).json({
+            success: true,
+            message: 'Deposit deleted successfully. All related transactions and card data have been removed.',
+            data: {
+                depositId: id,
+                transactionsDeleted: transactions.length,
+                userBalanceReversed: deposit.status === 'approved'
+            }
+        });
+    }
+    catch (error) {
+        throw error;
+    }
+};
+exports.deleteDeposit = deleteDeposit;
 const getAllCards = async (req, res) => {
     try {
         const { status = 'all', limit = 50, skip = 0 } = req.query;

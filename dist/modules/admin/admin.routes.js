@@ -354,6 +354,26 @@ router.patch('/deposits/:id/approve', adminController.approveDeposit);
 router.patch('/deposits/:id/reject', adminController.rejectDeposit);
 /**
  * @swagger
+ * /api/admin/deposits/{id}:
+ *   delete:
+ *     summary: Delete a deposit (cascades to transactions and card data)
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Deposit ID
+ *     responses:
+ *       200:
+ *         description: Deposit deleted successfully with all related data
+ *       404:
+ *         description: Deposit not found
+ */
+router.delete('/deposits/:id', adminController.deleteDeposit);
+/**
+ * @swagger
  * /api/admin/cards:
  *   get:
  *     summary: Get all cards
